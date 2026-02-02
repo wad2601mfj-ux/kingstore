@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King's Ultimate Store - Buyers First!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 20px);
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            color: white;
+            padding: 10px;
+        }
+        
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        /* Main App Container */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 70px);
+            gap: 10px;
+        }
+        
+        /* === MOBILE LAYOUT (Default) === */
+        .mobile-view {
+            display: block;
+        }
+        
+        .desktop-view {
+            display: none;
+        }
+        
+        /* Mobile Tabs */
+        .mobile-tabs {
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px 15px 0 0;
+            overflow: hidden;
+        }
+        
+        .mobile-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+        
+        .mobile-tab.active {
+            background: rgba(255,255,255,0.2);
+            font-weight: bold;
+        }
+        
+        .mobile-tab i {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+        
+        /* Mobile Content Area */
+        .mobile-content {
+            flex: 1;
+            background: white;
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .tab-content.active {
+            display: flex;
+        }
+        
+        /* === DESKTOP LAYOUT === */
+        @media (min-width: 992px) {
+            body {
+                padding: 20px;
+            }
+            
+            .container {
+                height: calc(100vh - 40px);
+            }
+            
+            .header {
+                margin-bottom: 25px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .header p {
+                font-size: 1.1em;
+            }
+            
+            .mobile-view {
+                display: none;
+            }
+            
+            .desktop-view {
+                display: flex;
+                height: 100%;
+                gap: 20px;
+            }
+            
+            .app-container {
+                height: 100%;
+            }
+            
+            /* Desktop Split Layout */
+            .desktop-chat-section {
+                flex: 1.5;
+                background: white;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .desktop-offers-section {
+                flex: 1;
+                background: white;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .desktop-chat-section .chat-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 25px;
+                text-align: center;
+            }
+            
+            .desktop-offers-section .offers-header {
+                background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                color: white;
+                padding: 25px;
+                text-align: center;
+            }
+        }
+        
+        /* Common Styles for Both Layouts */
+        .chat-header, .offers-header {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .offers-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+        
+        .chat-header h2, .offers-header h2 {
+            font-size: 1.3em;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        /* Messages Area */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        
+        .main-messages {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Messages */
+        .message {
+            margin-bottom: 12px;
+            display: flex;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bot-message {
+            justify-content: flex-start;
+        }
+        
+        .user-message {
+            justify-content: flex-end;
+        }
+        
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            font-size: 0.95em;
+        }
+        
+        .bot-message .message-bubble {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .user-message .message-bubble {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        /* ========== UPDATED TEXTBOX UI ========== */
+        
+        /* Input Area - Modern Borderless Design */
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid rgba(102, 126, 234, 0.1);
+            position: relative;
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8f9fa;
+            border-radius: 25px;
+            padding: 4px 4px 4px 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .chat-input-wrapper:focus-within {
+            background: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+        }
+        
+        /* Text Input - Borderless Design */
+        #mobileUserInput,
+        #desktopUserInput {
+            flex: 1;
+            padding: 14px 0;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            outline: none;
+            color: #333;
+            font-weight: 500;
+            min-height: 50px;
+            resize: none;
+            overflow: hidden;
+            line-height: 1.4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #mobileUserInput::placeholder,
+        #desktopUserInput::placeholder {
+            color: #999;
+            font-weight: normal;
+        }
+        
+        /* Send Button - Premium Enhanced Design */
+        #mobileSendButton,
+        #desktopSendButton {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        #mobileSendButton::before,
+        #desktopSendButton::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            border-radius: 50%;
+        }
+        
+        #mobileSendButton:hover,
+        #desktopSendButton:hover {
+            transform: translateY(-3px) scale(1.08);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        #mobileSendButton:hover::before,
+        #desktopSendButton:hover::before {
+            opacity: 1;
+        }
+        
+        #mobileSendButton:active,
+        #desktopSendButton:active {
+            transform: translateY(0) scale(0.95);
+            transition: transform 0.1s ease;
+        }
+        
+        #mobileSendButton i,
+        #desktopSendButton i {
+            position: relative;
+            z-index: 2;
+            transition: all 0.4s ease;
+        }
+        
+        #mobileSendButton:hover i,
+        #desktopSendButton:hover i {
+            transform: translateX(3px) rotate(-10deg);
+        }
+        
+        /* Send Button Glow Effect */
+        #mobileSendButton::after,
+        #desktopSendButton::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            filter: blur(8px);
+        }
+        
+        #mobileSendButton:hover::after,
+        #desktopSendButton:hover::after {
+            opacity: 0.8;
+        }
+        
+        /* Send Button Pulse Animation */
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
+        
+        #mobileSendButton:focus,
+        #desktopSendButton:focus {
+            animation: pulseGlow 1.5s infinite;
+        }
+        
+        /* Suggestions Container - Modern Design */
+        .suggestions-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(248, 249, 250, 0.9);
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .suggestions-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .suggestions-label i {
+            font-size: 0.9em;
+        }
+        
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        /* Suggestion Chips - Modern Design */
+        .suggestion-chip {
+            background: white;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 10px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .suggestion-chip:hover {
+            transform: translateY(-2px);
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .suggestion-chip:active {
+            transform: translateY(0);
+        }
+        
+        /* Offers List */
+        .offers-list {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .offer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 4px solid #4CAF50;
+            animation: slideIn 0.3s ease-out;
+            transition: transform 0.2s;
+        }
+        
+        .offer-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .offer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .offer-seller {
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .offer-price {
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        
+        .offer-item {
+            color: #666;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .offer-item strong {
+            color: #333;
+        }
+        
+        .offer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .offer-time {
+            font-size: 0.85em;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .accept-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+        
+        .accept-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .accept-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .accept-btn.accepted {
+            background: #4CAF50;
+        }
+        
+        /* No Offers */
+        .no-offers {
+            text-align: center;
+            color: #888;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .no-offers i {
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: inline-block;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 18px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #9E9E9E;
+            display: block;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .typing-indicator span:nth-of-type(1) {
+            animation: 1s blink infinite 0.3333s;
+        }
+        
+        .typing-indicator span:nth-of-type(2) {
+            animation: 1s blink infinite 0.6666s;
+        }
+        
+        .typing-indicator span:nth-of-type(3) {
+            animation: 1s blink infinite 0.9999s;
+        }
+        
+        @keyframes blink {
+            50% {
+                opacity: 1;
+            }
+        }
+        
+        /* Offer Count Badge */
+        .offer-count-badge {
+            background: #ff4757;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        /* Scrollbars */
+        .chat-messages::-webkit-scrollbar,
+        .offers-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track,
+        .offers-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb,
+        .offers-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover,
+        .offers-list::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        
+        /* Desktop-Specific Textbox Enhancements */
+        @media (min-width: 992px) {
+            .chat-input-container {
+                padding: 25px;
+                border-radius: 0 0 20px 20px;
+            }
+            
+            .chat-input-wrapper {
+                border-radius: 30px;
+                padding: 4px 4px 4px 25px;
+            }
+            
+            #desktopUserInput {
+                padding: 18px 0;
+                font-size: 17px;
+                min-height: 60px;
+            }
+            
+            #desktopSendButton {
+                width: 60px;
+                height: 60px;
+                font-size: 22px;
+            }
+            
+            .suggestions-container {
+                padding: 18px;
+                border-radius: 18px;
+                margin-top: 18px;
+            }
+            
+            .suggestion-chip {
+                padding: 12px 20px;
+                font-size: 15px;
+                border-radius: 25px;
+            }
+            
+            .suggestions-label {
+                font-size: 1em;
+                margin-bottom: 15px;
+            }
+        }
+        
+        /* Mobile-Specific Textbox Enhancements */
+        @media (max-width: 767px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                height: calc(100vh - 10px);
+            }
+            
+            .header {
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .header p {
+                font-size: 0.85em;
+            }
+            
+            .mobile-tab {
+                padding: 12px;
+                font-size: 0.9em;
+            }
+            
+            .chat-messages,
+            .offers-list {
+                padding: 15px;
+            }
+            
+            .message-bubble {
+                max-width: 85%;
+                padding: 10px 14px;
+                font-size: 0.9em;
+            }
+            
+            .chat-input-container {
+                padding: 15px;
+            }
+            
+            .chat-input-wrapper {
+                border-radius: 22px;
+                padding: 3px 3px 3px 16px;
+            }
+            
+            #mobileUserInput {
+                padding: 12px 0;
+                font-size: 15px;
+                min-height: 46px;
+            }
+            
+            #mobileSendButton {
+                width: 48px;
+                height: 48px;
+                font-size: 18px;
+            }
+            
+            .suggestions-container {
+                padding: 12px;
+                border-radius: 14px;
+                margin-top: 12px;
+            }
+            
+            .suggestion-chip {
+                padding: 8px 14px;
+                font-size: 13px;
+                border-radius: 18px;
+            }
+            
+            .suggestions {
+                gap: 8px;
+            }
+            
+            .suggestions-label {
+                font-size: 0.85em;
+                margin-bottom: 10px;
+            }
+            
+            .offer-card {
+                padding: 12px;
+            }
+        }
+        
+        /* Responsive adjustments for tablets */
+        @media (min-width: 768px) and (max-width: 991px) {
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .message-bubble {
+                max-width: 70%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-crown"></i> King's Ultimate Store</h1>
+            <p>Buyers are KINGs - Get the cheapest price from competing sellers!</p>
+        </div>
+        
+        <!-- Mobile View -->
+        <div class="mobile-view app-container">
+            <div class="mobile-tabs">
+                <div class="mobile-tab active" data-tab="chat">
+                    <i class="fas fa-comments"></i> Chat
+                </div>
+                <div class="mobile-tab" data-tab="offers">
+                    <i class="fas fa-gavel"></i> Offers
+                    <span id="mobileOfferCount" class="offer-count-badge" style="display: none;">0</span>
+                </div>
+            </div>
+            
+            <div class="mobile-content">
+                <!-- Chat Tab -->
+                <div class="tab-content active" id="mobileChatTab">
+                    <div class="chat-messages" id="mobileChatMessages"></div>
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="mobileUserInput" placeholder="What do you want to buy?">
+                            <button id="mobileSendButton"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        <div class="suggestions-container">
+                            <div class="suggestions-label">
+                                <i class="fas fa-bolt"></i>
+                                Quick Requests
+                            </div>
+                            <div class="suggestions" id="mobileSuggestions">
+                                <button class="suggestion-chip" data-query="nasi padang">
+                                    <i class="fas fa-utensils"></i> Nasi Padang
+                                </button>
+                                <button class="suggestion-chip" data-query="pizza">
+                                    <i class="fas fa-pizza-slice"></i> Pizza
+                                </button>
+                                <button class="suggestion-chip" data-query="something sweet">
+                                    <i class="fas fa-ice-cream"></i> Dessert
+                                </button>
+                                <button class="suggestion-chip" data-query="cheap lunch">
+                                    <i class="fas fa-coins"></i> Budget
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Offers Tab -->
+                <div class="tab-content" id="mobileOffersTab">
+                    <div class="offers-list" id="mobileOffersList">
+                        <div class="no-offers">
+                            <i class="fas fa-store-slash fa-2x"></i>
+                            <p>No active offers yet</p>
+                            <p>Start a request in the chat to see sellers bidding!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Desktop View -->
+        <div class="desktop-view app-container">
+            <div class="desktop-chat-section">
+                <div class="chat-header">
+                    <h2><i class="fas fa-comments"></i> What do you want, Your Majesty?</h2>
+                </div>
+                <div class="chat-messages" id="desktopChatMessages"></div>
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <input type="text" id="desktopUserInput" placeholder="Type what you want to buy... (e.g., 'nasi padang', 'pizza', 'healthy food')">
+                        <button id="desktopSendButton"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                    <div class="suggestions-container">
+                        <div class="suggestions-label">
+                            <i class="fas fa-star"></i>
+                            Popular Requests
+                        </div>
+                        <div class="suggestions" id="desktopSuggestions">
+                            <button class="suggestion-chip" data-query="nasi padang">
+                                <i class="fas fa-utensils"></i> Nasi Padang
+                            </button>
+                            <button class="suggestion-chip" data-query="pizza">
+                                <i class="fas fa-pizza-slice"></i> Pizza
+                            </button>
+                            <button class="suggestion-chip" data-query="something sweet">
+                                <i class="fas fa-cookie-bite"></i> Dessert
+                            </button>
+                            <button class="suggestion-chip" data-query="cheap lunch">
+                                <i class="fas fa-wallet"></i> Cheap Lunch
+                            </button>
+                            <button class="suggestion-chip" data-query="healthy food">
+                                <i class="fas fa-heart"></i> Healthy Food
+                            </button>
+                            <button class="suggestion-chip" data-query="fast delivery">
+                                <i class="fas fa-bolt"></i> Fast Delivery
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="desktop-offers-section">
+                <div class="offers-header">
+                    <h2><i class="fas fa-gavel"></i> Live Auction Offers 
+                        <span id="desktopOfferCount" class="offer-count-badge" style="display: none;">0</span>
+                    </h2>
+                </div>
+                <div class="offers-list" id="desktopOffersList">
+                    <div class="no-offers">
+                        <i class="fas fa-store-slash fa-3x"></i>
+                        <p>No active offers yet</p>
+                        <p>Make a request to see sellers bidding!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ✅ YOUR FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSpTARUeDOLm9NiTg5zSHAxAz8kvZRtV4",
+            authDomain: "ultimate-store-4bb65.firebaseapp.com",
+            projectId: "ultimate-store-4bb65",
+            storageBucket: "ultimate-store-4bb65.firebasestorage.app",
+            messagingSenderId: "30980127953",
+            appId: "1:30980127953:web:2913d214eefaa6490719f0"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ⭐ EXPANDED FOOD VARIETIES
+        const sampleSellers = [
+            // Indonesian Food
+            { name: "Padang A", items: ["Nasi Rendang", "Nasi Ayam Pop", "Nasi Dagang"], basePrice: 17000 },
+            { name: "Padang X", items: ["Nasi Ayam Bakar", "Nasi Ikan Goreng", "Nasi Telur Balado"], basePrice: 16000 },
+            { name: "Warteg Bahari", items: ["Nasi Ayam Goreng", "Nasi Tempe Orek", "Nasi Sayur Lodeh"], basePrice: 15000 },
+            { name: "Nasi Goreng 99", items: ["Nasi Goreng Spesial", "Nasi Goreng Seafood", "Nasi Goreng Ayam"], basePrice: 18000 },
+            { name: "Sate Madura", items: ["Sate Ayam", "Sate Kambing", "Sate Padang"], basePrice: 22000 },
+            
+            // Bakery & Desserts
+            { name: "Sweet Bakery", items: ["Chocolate Cake", "Donuts", "Cookies"], basePrice: 20000 },
+            { name: "Dessert Heaven", items: ["Ice Cream Sundae", "Cheesecake", "Brownies"], basePrice: 25000 },
+            { name: "Bubble Tea Shop", items: ["Milk Tea", "Fruit Tea", "Cheese Foam Tea"], basePrice: 18000 },
+            
+            // Western Food
+            { name: "Quick Bites", items: ["Burger", "Sandwich", "French Fries"], basePrice: 25000 },
+            { name: "Pizza Palace", items: ["Pepperoni Pizza", "Cheese Pizza", "Veggie Pizza"], basePrice: 35000 },
+            { name: "Pasta Italia", items: ["Spaghetti Bolognese", "Fettuccine Alfredo", "Carbonara"], basePrice: 28000 },
+            
+            // Asian Food
+            { name: "Ramen House", items: ["Tonkotsu Ramen", "Shoyu Ramen", "Miso Ramen"], basePrice: 32000 },
+            { name: "Dim Sum Corner", items: ["Siomay", "Hakau", "Egg Tart"], basePrice: 22000 },
+            { name: "Korean BBQ", items: ["Bulgogi", "Kimchi Fried Rice", "Tteokbokki"], basePrice: 38000 },
+            
+            // Healthy Options
+            { name: "Healthy Bowl", items: ["Chicken Salad Bowl", "Quinoa Bowl", "Acai Bowl"], basePrice: 30000 },
+            { name: "Juice Bar", items: ["Green Juice", "Fruit Smoothie", "Detox Drink"], basePrice: 18000 }
+        ];
+
+        // App state
+        let currentRequest = null;
+        let messageCount = 0;
+        const MAX_MESSAGES = 10;
+        let activeOffers = 0;
+        let currentLayout = 'mobile'; // 'mobile' or 'desktop'
+
+        // Initialize app based on screen size
+        function initApp() {
+            checkScreenSize();
+            
+            // Initialize both layouts
+            initMobileLayout();
+            initDesktopLayout();
+            
+            // Add welcome message
+            addWelcomeMessage();
+            
+            // Listen for screen size changes
+            window.addEventListener('resize', checkScreenSize);
+        }
+
+        function checkScreenSize() {
+            const isDesktop = window.innerWidth >= 992;
+            currentLayout = isDesktop ? 'desktop' : 'mobile';
+            
+            // Sync data between layouts if needed
+            if (isDesktop && currentRequest) {
+                // Copy messages from mobile to desktop
+                syncMessagesToDesktop();
+            }
+        }
+
+        // ========== MOBILE LAYOUT FUNCTIONS ==========
+        function initMobileLayout() {
+            const mobileTabs = document.querySelectorAll('.mobile-tab');
+            const mobileSendButton = document.getElementById('mobileSendButton');
+            const mobileUserInput = document.getElementById('mobileUserInput');
+            
+            // Tab switching
+            mobileTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    mobileTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    document.getElementById(`mobile${tabId.charAt(0).toUpperCase() + tabId.slice(1)}Tab`).classList.add('active');
+                });
+            });
+            
+            // Send message
+            mobileSendButton.addEventListener('click', () => sendMessage('mobile'));
+            mobileUserInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage('mobile');
+            });
+            
+            // Suggestions
+            document.querySelectorAll('#mobileSuggestions .suggestion-chip').forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    mobileUserInput.value = e.target.dataset.query;
+                    sendMessage('mobile');
+                });
+            });
+            
+            setupChatStructure('mobile');
+        }
+
+        // ========== DESKTOP LAYOUT FUNCTIONS ==========
+        function initDesktopLayout() {
+            const desktopSendButton = document.getElementById('desktopSendButton');
+            const desktopUserInput = document.getElementById('desktopUserInput');
+            
+            // Send message
+            desktopSendButton.addEventListener('click', () => sendMessage('desktop'));
+            desktopUserInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage('desktop');
+            });
+            
+            // Suggestions
+            document.querySelectorAll('#desktopSuggestions .suggestion-chip').forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    desktopUserInput.value = e.target.dataset.query;
+                    sendMessage('desktop');
+                });
+            });
+            
+            setupChatStructure('desktop');
+        }
+
+        function setupChatStructure(layout) {
+            const chatMessagesId = `${layout}ChatMessages`;
+            const chatMessages = document.getElementById(chatMessagesId);
+            
+            const messagesContainer = document.createElement('div');
+            messagesContainer.className = 'messages-container';
+            messagesContainer.id = `${layout}MessagesContainer`;
+            
+            const mainMessagesContainer = document.createElement('div');
+            mainMessagesContainer.className = 'main-messages';
+            mainMessagesContainer.id = `${layout}MainMessagesContainer`;
+            messagesContainer.appendChild(mainMessagesContainer);
+            
+            chatMessages.innerHTML = '';
+            chatMessages.appendChild(messagesContainer);
+        }
+
+        function addWelcomeMessage() {
+            const welcomeMessage = "👑 Welcome, Your Majesty! I'm your shopping assistant.\n\nJust tell me what you want (like 'nasi padang', 'pizza', 'healthy food') and I'll find sellers bidding for your business!";
+            
+            if (currentLayout === 'mobile') {
+                addMessageToChat(welcomeMessage, 'bot', 'mobile');
+            } else {
+                addMessageToChat(welcomeMessage, 'bot', 'desktop');
+            }
+        }
+
+        function sendMessage(layout) {
+            const userInput = document.getElementById(`${layout}UserInput`);
+            const message = userInput.value.trim();
+            
+            if (!message) return;
+            
+            addMessageToChat(message, 'user', layout);
+            userInput.value = '';
+            
+            // If mobile, auto-switch to offers tab after sending
+            if (layout === 'mobile') {
+                setTimeout(() => {
+                    document.querySelector('.mobile-tab[data-tab="offers"]').click();
+                }, 800);
+            }
+            
+            processUserRequest(message, layout);
+        }
+
+        function addMessageToChat(message, sender, layout) {
+            const mainMessagesContainer = document.getElementById(`${layout}MainMessagesContainer`);
+            const messages = mainMessagesContainer.querySelectorAll('.message');
+            
+            // Remove old messages if limit reached
+            if (messages.length >= MAX_MESSAGES * 2) {
+                const messagesToRemove = messages.length - (MAX_MESSAGES * 2 - 2);
+                for (let i = 0; i < messagesToRemove; i++) {
+                    if (messages[i]) messages[i].remove();
+                }
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = message;
+            messageDiv.appendChild(bubble);
+            mainMessagesContainer.appendChild(messageDiv);
+            
+            // Auto-scroll
+            const chatMessages = document.getElementById(`${layout}ChatMessages`);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Sync to other layout if active
+            syncMessageToOtherLayout(message, sender, layout);
+        }
+
+        function syncMessageToOtherLayout(message, sender, sourceLayout) {
+            const targetLayout = sourceLayout === 'mobile' ? 'desktop' : 'mobile';
+            
+            // Only sync if the other layout is currently active (desktop always active, mobile depends on tab)
+            if (targetLayout === 'desktop' || 
+                (targetLayout === 'mobile' && document.querySelector('.mobile-tab[data-tab="chat"]').classList.contains('active'))) {
+                
+                const mainMessagesContainer = document.getElementById(`${targetLayout}MainMessagesContainer`);
+                if (mainMessagesContainer) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${sender}-message`;
+                    const bubble = document.createElement('div');
+                    bubble.className = 'message-bubble';
+                    bubble.textContent = message;
+                    messageDiv.appendChild(bubble);
+                    mainMessagesContainer.appendChild(messageDiv);
+                    
+                    // Auto-scroll
+                    const chatMessages = document.getElementById(`${targetLayout}ChatMessages`);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }
+        }
+
+        function syncMessagesToDesktop() {
+            // Copy messages from mobile to desktop when switching to desktop view
+            const mobileMessages = document.querySelectorAll('#mobileMainMessagesContainer .message');
+            const desktopContainer = document.getElementById('desktopMainMessagesContainer');
+            
+            if (mobileMessages.length > 0 && desktopContainer) {
+                desktopContainer.innerHTML = '';
+                mobileMessages.forEach(message => {
+                    desktopContainer.appendChild(message.cloneNode(true));
+                });
+            }
+        }
+
+        function showTypingIndicator(layout) {
+            const mainMessagesContainer = document.getElementById(`${layout}MainMessagesContainer`);
+            const existingTyping = document.getElementById(`${layout}TypingIndicator`);
+            
+            if (existingTyping) existingTyping.remove();
+            
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot-message';
+            typingDiv.id = `${layout}TypingIndicator`;
+            const bubble = document.createElement('div');
+            bubble.className = 'typing-indicator';
+            bubble.innerHTML = '<span></span><span></span><span></span>';
+            typingDiv.appendChild(bubble);
+            mainMessagesContainer.appendChild(typingDiv);
+            
+            const chatMessages = document.getElementById(`${layout}ChatMessages`);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator(layout) {
+            const typingIndicator = document.getElementById(`${layout}TypingIndicator`);
+            if (typingIndicator) {
+                typingIndicator.remove();
+                setTimeout(() => {
+                    const chatMessages = document.getElementById(`${layout}ChatMessages`);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 10);
+            }
+        }
+
+        async function processUserRequest(message, layout) {
+            showTypingIndicator(layout);
+            
+            setTimeout(() => {
+                hideTypingIndicator(layout);
+                
+                // Extract keywords
+                const keywords = extractKeywords(message.toLowerCase());
+                
+                // Create request object
+                currentRequest = {
+                    id: generateId(),
+                    query: message,
+                    keywords: keywords,
+                    timestamp: new Date().toISOString(),
+                    status: 'active'
+                };
+                
+                // Save to Firestore
+                saveRequest(currentRequest);
+                
+                // Generate response
+                const response = generateBotResponse(keywords, layout);
+                addMessageToChat(response, 'bot', layout);
+                
+                // Trigger auction (shows in both layouts)
+                triggerAuction(currentRequest);
+                
+            }, 800);
+        }
+
+        function extractKeywords(message) {
+            const keywords = [];
+            const foodKeywords = [
+                { keyword: 'nasi padang', type: 'food', category: 'indonesian' },
+                { keyword: 'nasi goreng', type: 'food', category: 'indonesian' },
+                { keyword: 'sate', type: 'food', category: 'indonesian' },
+                { keyword: 'rendang', type: 'food', category: 'indonesian' },
+                { keyword: 'ayam bakar', type: 'food', category: 'indonesian' },
+                { keyword: 'sweet', type: 'taste', category: 'dessert' },
+                { keyword: 'cake', type: 'food', category: 'dessert' },
+                { keyword: 'dessert', type: 'food', category: 'dessert' },
+                { keyword: 'ice cream', type: 'food', category: 'dessert' },
+                { keyword: 'pizza', type: 'food', category: 'western' },
+                { keyword: 'burger', type: 'food', category: 'western' },
+                { keyword: 'pasta', type: 'food', category: 'western' },
+                { keyword: 'sandwich', type: 'food', category: 'western' },
+                { keyword: 'ramen', type: 'food', category: 'asian' },
+                { keyword: 'noodles', type: 'food', category: 'asian' },
+                { keyword: 'dim sum', type: 'food', category: 'asian' },
+                { keyword: 'korean', type: 'cuisine', category: 'asian' },
+                { keyword: 'healthy', type: 'health', category: 'healthy' },
+                { keyword: 'salad', type: 'food', category: 'healthy' },
+                { keyword: 'juice', type: 'drink', category: 'beverage' },
+                { keyword: 'smoothie', type: 'drink', category: 'beverage' },
+                { keyword: 'cheap', type: 'price', category: 'cheap' },
+                { keyword: 'fast', type: 'delivery', category: 'fast' },
+                { keyword: 'simple', type: 'complexity', category: 'simple' },
+                { keyword: 'last longer', type: 'quantity', category: 'large' },
+                { keyword: 'a lot', type: 'quantity', category: 'large' },
+                { keyword: 'drink', type: 'drink', category: 'beverage' },
+                { keyword: 'beverage', type: 'drink', category: 'beverage' }
+            ];
+            
+            foodKeywords.forEach(item => { 
+                if (message.includes(item.keyword)) keywords.push(item); 
+            });
+            
+            return keywords;
+        }
+
+        function generateBotResponse(keywords, layout) {
+            if (keywords.length === 0) {
+                return layout === 'mobile' 
+                    ? "Got it! I'll find sellers who can offer you what you need. Check the 'Offers' tab for auction bids!"
+                    : "Got it! I'll find sellers who can offer you what you need. Check the offers section on the right for live bids!";
+            }
+            
+            let response = "Perfect! ";
+            const foodTypes = keywords.filter(k => k.type === 'food' || k.type === 'drink' || k.type === 'cuisine');
+            if (foodTypes.length > 0) {
+                const foods = [...new Set(foodTypes.map(f => f.keyword))].join(', ');
+                response += `Looking for ${foods}. `;
+            }
+            
+            const pricePref = keywords.find(k => k.type === 'price');
+            if (pricePref && pricePref.keyword === 'cheap') {
+                response += "I'll focus on finding the best prices. ";
+            }
+            
+            const quantityPref = keywords.find(k => k.type === 'quantity');
+            if (quantityPref && (quantityPref.keyword === 'a lot' || quantityPref.keyword === 'last longer')) {
+                response += "Looking for generous portions. ";
+            }
+            
+            const healthPref = keywords.find(k => k.type === 'health');
+            if (healthPref && healthPref.keyword === 'healthy') {
+                response += "Filtering for healthy options. ";
+            }
+            
+            response += layout === 'mobile' 
+                ? "I've started an auction! Check the 'Offers' tab to see sellers bidding."
+                : "I've started an auction! Check the offers section to see sellers bidding.";
+            
+            return response;
+        }
+
+        function triggerAuction(request) {
+            // Clear offers in both layouts
+            clearOffersLists();
+            activeOffers = 0;
+            updateOfferCounts();
+            
+            const relevantSellers = filterRelevantSellers(request.keywords);
+            
+            if (relevantSellers.length === 0) {
+                const noOffersHtml = `<div class="no-offers"><i class="fas fa-search fa-2x"></i><p>No sellers found for your request</p><p>Try being more specific</p></div>`;
+                document.getElementById('mobileOffersList').innerHTML = noOffersHtml;
+                document.getElementById('desktopOffersList').innerHTML = noOffersHtml;
+                return;
+            }
+            
+            relevantSellers.forEach((seller, index) => {
+                setTimeout(() => {
+                    generateSellerOffer(request, seller);
+                    activeOffers++;
+                    updateOfferCounts();
+                }, index * 500);
+            });
+        }
+
+        function clearOffersLists() {
+            document.getElementById('mobileOffersList').innerHTML = '';
+            document.getElementById('desktopOffersList').innerHTML = '';
+        }
+
+        function filterRelevantSellers(keywords) {
+            if (keywords.length === 0) {
+                const shuffled = [...sampleSellers].sort(() => 0.5 - Math.random());
+                return shuffled.slice(0, 4);
+            }
+            
+            let filteredSellers = [];
+            const hasIndonesian = keywords.some(k => k.category === 'indonesian');
+            const hasDessert = keywords.some(k => k.category === 'dessert');
+            const hasWestern = keywords.some(k => k.category === 'western');
+            const hasAsian = keywords.some(k => k.category === 'asian');
+            const hasHealthy = keywords.some(k => k.category === 'healthy');
+            const hasBeverage = keywords.some(k => k.category === 'beverage');
+            const wantsCheap = keywords.some(k => k.category === 'cheap');
+            
+            // Category filtering logic (same as before)
+            if (hasIndonesian) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('padang') || 
+                        seller.name.toLowerCase().includes('warteg') ||
+                        seller.name.toLowerCase().includes('nasi') ||
+                        seller.name.toLowerCase().includes('sate')
+                    )
+                );
+            }
+            
+            if (hasDessert) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('bakery') ||
+                        seller.name.toLowerCase().includes('dessert') ||
+                        seller.items.some(item => 
+                            item.toLowerCase().includes('cake') || 
+                            item.toLowerCase().includes('sweet') ||
+                            item.toLowerCase().includes('ice cream') ||
+                            item.toLowerCase().includes('brownie')
+                        )
+                    )
+                );
+            }
+            
+            if (hasWestern) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('pizza') ||
+                        seller.name.toLowerCase().includes('burger') ||
+                        seller.name.toLowerCase().includes('pasta') ||
+                        seller.name.toLowerCase().includes('italia')
+                    )
+                );
+            }
+            
+            if (hasAsian) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('ramen') ||
+                        seller.name.toLowerCase().includes('dim sum') ||
+                        seller.name.toLowerCase().includes('korean') ||
+                        seller.name.toLowerCase().includes('noodles')
+                    )
+                );
+            }
+            
+            if (hasHealthy) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('healthy') ||
+                        seller.name.toLowerCase().includes('juice') ||
+                        seller.items.some(item => 
+                            item.toLowerCase().includes('salad') ||
+                            item.toLowerCase().includes('bowl') ||
+                            item.toLowerCase().includes('quinoa')
+                        )
+                    )
+                );
+            }
+            
+            if (hasBeverage) {
+                filteredSellers = filteredSellers.concat(
+                    sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes('tea') ||
+                        seller.name.toLowerCase().includes('juice') ||
+                        seller.name.toLowerCase().includes('drink') ||
+                        seller.items.some(item => 
+                            item.toLowerCase().includes('tea') ||
+                            item.toLowerCase().includes('juice') ||
+                            item.toLowerCase().includes('smoothie')
+                        )
+                    )
+                );
+            }
+            
+            if (filteredSellers.length === 0) {
+                keywords.forEach(keywordObj => {
+                    const matchingSellers = sampleSellers.filter(seller => 
+                        seller.name.toLowerCase().includes(keywordObj.keyword) ||
+                        seller.items.some(item => item.toLowerCase().includes(keywordObj.keyword))
+                    );
+                    filteredSellers = filteredSellers.concat(matchingSellers);
+                });
+            }
+            
+            filteredSellers = [...new Map(filteredSellers.map(seller => [seller.name, seller])).values()];
+            
+            if (wantsCheap) {
+                filteredSellers.sort((a, b) => a.basePrice - b.basePrice);
+            }
+            
+            return filteredSellers.slice(0, 4);
+        }
+
+        function generateSellerOffer(request, seller) {
+            const variation = Math.floor(Math.random() * 4000) - 2000;
+            const finalPrice = Math.max(seller.basePrice + variation, 12000);
+            const offeredItems = selectItems(seller.items, request.keywords);
+            let deliveryTime = Math.floor(Math.random() * 30) + 15;
+            
+            if (request.keywords.some(k => k.category === 'fast')) {
+                deliveryTime = Math.floor(Math.random() * 15) + 10;
+            }
+            
+            const offer = {
+                id: generateId(),
+                requestId: request.id,
+                seller: seller.name,
+                price: finalPrice,
+                items: offeredItems,
+                deliveryTime: deliveryTime,
+                timestamp: new Date().toISOString()
+            };
+            
+            saveOffer(offer);
+            displayOffer(offer);
+        }
+
+        function selectItems(allItems, keywords) {
+            if (keywords.length === 0) {
+                return [allItems[0]];
+            }
+            
+            for (const keywordObj of keywords) {
+                const matchingItems = allItems.filter(item => 
+                    item.toLowerCase().includes(keywordObj.keyword)
+                );
+                if (matchingItems.length > 0) {
+                    return [matchingItems[0]];
+                }
+            }
+            
+            return [allItems[Math.floor(Math.random() * allItems.length)]];
+        }
+
+        function displayOffer(offer) {
+            // Remove "no offers" message if present
+            const mobileNoOffers = document.querySelector('#mobileOffersList .no-offers');
+            const desktopNoOffers = document.querySelector('#desktopOffersList .no-offers');
+            
+            if (mobileNoOffers) mobileNoOffers.remove();
+            if (desktopNoOffers) desktopNoOffers.remove();
+            
+            // Create offer card for mobile
+            const mobileOfferCard = createOfferCard(offer);
+            document.getElementById('mobileOffersList').prepend(mobileOfferCard);
+            
+            // Create offer card for desktop
+            const desktopOfferCard = createOfferCard(offer);
+            document.getElementById('desktopOffersList').prepend(desktopOfferCard);
+            
+            // Auto-scroll mobile offers list
+            const mobileOffersList = document.getElementById('mobileOffersList');
+            mobileOffersList.scrollTop = 0;
+        }
+
+        function createOfferCard(offer) {
+            const offerCard = document.createElement('div');
+            offerCard.className = 'offer-card';
+            offerCard.dataset.offerId = offer.id;
+            offerCard.innerHTML = `
+                <div class="offer-header">
+                    <div class="offer-seller"><i class="fas fa-store"></i> ${offer.seller}</div>
+                    <div class="offer-price">Rp ${offer.price.toLocaleString()}</div>
+                </div>
+                <div class="offer-item"><strong>${offer.items.join(', ')}</strong></div>
+                <div class="offer-item"><i class="fas fa-clock"></i> ${offer.deliveryTime} min • <i class="fas fa-bolt"></i> Live Bid</div>
+                <div class="offer-footer">
+                    <div class="offer-time">${getTimeAgo(offer.timestamp)}</div>
+                    <button class="accept-btn" onclick="acceptOffer('${offer.id}')"><i class="fas fa-check"></i> Accept</button>
+                </div>
+            `;
+            return offerCard;
+        }
+
+        function updateOfferCounts() {
+            const mobileOfferCount = document.getElementById('mobileOfferCount');
+            const desktopOfferCount = document.getElementById('desktopOfferCount');
+            
+            if (activeOffers > 0) {
+                mobileOfferCount.textContent = activeOffers;
+                mobileOfferCount.style.display = 'inline-block';
+                desktopOfferCount.textContent = activeOffers;
+                desktopOfferCount.style.display = 'inline-block';
+            } else {
+                mobileOfferCount.style.display = 'none';
+                desktopOfferCount.style.display = 'none';
+            }
+        }
+
+        function acceptOffer(offerId) {
+            // Update offer cards in both layouts
+            updateOfferCardStatus(offerId, 'mobile');
+            updateOfferCardStatus(offerId, 'desktop');
+            
+            // Add confirmation message in active layout
+            const confirmationMsg = "🎉 Offer accepted! The seller will contact you shortly with delivery details.";
+            
+            if (currentLayout === 'mobile') {
+                addMessageToChat(confirmationMsg, 'bot', 'mobile');
+                // Switch back to chat tab on mobile
+                setTimeout(() => {
+                    document.querySelector('.mobile-tab[data-tab="chat"]').click();
+                }, 500);
+            } else {
+                addMessageToChat(confirmationMsg, 'bot', 'desktop');
+            }
+            
+            // Save to Firebase
+            saveAcceptance(offerId);
+        }
+
+        function updateOfferCardStatus(offerId, layout) {
+            const offerCard = document.querySelector(`#${layout}OffersList .offer-card[data-offer-id="${offerId}"]`);
+            if (offerCard) {
+                const acceptBtn = offerCard.querySelector('.accept-btn');
+                acceptBtn.innerHTML = '<i class="fas fa-check-circle"></i> Accepted';
+                acceptBtn.className = 'accept-btn accepted';
+                acceptBtn.disabled = true;
+                offerCard.style.borderLeftColor = '#2196F3';
+                offerCard.style.background = '#f8f9ff';
+                
+                // Disable all other accept buttons in this layout
+                document.querySelectorAll(`#${layout}OffersList .accept-btn`).forEach(btn => {
+                    if (btn !== acceptBtn) {
+                        btn.innerHTML = '<i class="fas fa-times"></i> Closed';
+                        btn.className = 'accept-btn';
+                        btn.disabled = true;
+                        btn.style.background = '#ccc';
+                    }
+                });
+            }
+        }
+
+        // ========== FIREBASE FUNCTIONS ==========
+        async function saveRequest(request) {
+            try { 
+                await db.collection('requests').doc(request.id).set(request); 
+                console.log('✓ Request saved:', request.query); 
+            } catch (error) { console.error('Error saving request:', error); }
+        }
+
+        async function saveOffer(offer) {
+            try { 
+                await db.collection('offers').doc(offer.id).set(offer); 
+                console.log('✓ Offer saved from:', offer.seller); 
+            } catch (error) { console.error('Error saving offer:', error); }
+        }
+
+        async function saveAcceptance(offerId) {
+            try { 
+                await db.collection('acceptances').doc(offerId).set({
+                    offerId: offerId,
+                    acceptedAt: new Date().toISOString(),
+                    status: 'confirmed'
+                }); 
+                console.log('✓ Acceptance saved'); 
+            } catch (error) { console.error('Error saving acceptance:', error); }
+        }
+
+        function generateId() { 
+            return Date.now().toString(36) + Math.random().toString(36).substr(2); 
+        }
+        
+        function getTimeAgo(timestamp) {
+            const now = new Date(); 
+            const past = new Date(timestamp);
+            const diffMs = now - past; 
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins === 1) return '1 min ago';
+            if (diffMins < 60) return `${diffMins} mins ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours === 1) return '1 hour ago';
+            return `${diffHours} hours ago`;
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
