@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Admin - Auto Compress</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f1f5f9; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; } 
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        h2 { text-align: center; color: #1e3a8a; margin-bottom: 25px; }
+        .section-title { font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 15px; border-left: 5px solid #1e3a8a; padding-left: 10px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #475569; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box; transition: 0.3s; }
+        input:focus, select:focus { border-color: #3b82f6; outline: none; }
+        
+        /* UPLOAD STYLE */
+        .file-upload { border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 10px; cursor: pointer; transition: 0.3s; background: #f8fafc; color: #1e3a8a; font-weight: bold; }
+        .file-upload:hover { border-color: #3b82f6; background: #eff6ff; }
+        .preview-img { width: 100%; height: 200px; object-fit: contain; border-radius: 10px; display: none; margin-top: 10px; border: 1px solid #ddd; background: #eee; }
+
+        .btn-submit { width: 100%; padding: 15px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); }
+        .btn-update { background: linear-gradient(135deg, #f59e0b, #d97706); } 
+        .btn-cancel { background: #64748b; margin-top: 10px; display: none; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
+        th { background: #f8fafc; text-align: left; padding: 15px; color: #64748b; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
+        .thumb-small { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-heavy { background: #dbeafe; color: #1e40af; }
+        .badge-snack { background: #fce7f3; color: #9d174d; }
+        .badge-drink { background: #dcfce7; color: #166534; }
+        .badge-sweet { background: #ffedd5; color: #9a3412; }
+
+        .action-btns { display: flex; gap: 8px; }
+        .btn-mini { padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: white; }
+        .btn-edit { background: #f59e0b; }
+        .btn-del { background: #ef4444; }
+        
+        .alert { padding: 15px; border-radius: 10px; margin-top: 20px; display: none; text-align: center; font-weight: 600; background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2><i class="fas fa-user-tie"></i> Seller Admin Panel</h2>
+        <div class="section-title">📦 Input Product</div>
+        <input type="hidden" id="editId">
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Store Name</label>
+                <input type="text" id="sName" placeholder="Contoh: Dapur Bu Dewi">
+            </div>
+            <div class="form-group">
+                <label>WhatsApp Contact</label>
+                <input type="text" id="sContact" placeholder="+628xxx">
+            </div>
+            <div class="form-group">
+                <label>Item Name</label>
+                <input type="text" id="sItem" placeholder="Contoh: Nasi Goreng Spesial">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="sCategory">
+                    <option value="" disabled selected>-- Select --</option>
+                    <option value="Heavy Meal">🍛 Heavy Meal</option>
+                    <option value="Light Snack">🍟 Light Snack</option>
+                    <option value="Beverage">🥤 Beverage</option>
+                    <option value="Dessert">🍰 Dessert</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Base Price (IDR)</label>
+                <input type="number" id="sPrice" placeholder="Contoh: 15000">
+            </div>
+            
+            <div class="form-group">
+                <label>Product Photo</label>
+                <div class="file-upload" onclick="document.getElementById('sImgInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i> Insert Image
+                </div>
+                <input type="file" id="sImgInput" style="display:none" accept="image/*" onchange="handleImageUpload()">
+                <input type="hidden" id="sImgBase64"> 
+            </div>
+        </div>
+
+        <img id="imgPreview" class="preview-img" alt="Preview">
+
+        <button id="btnPublish" class="btn-submit" onclick="saveProduct()">
+            <i class="fas fa-plus-circle"></i> Add to Catalog
+        </button>
+        <button id="btnCancel" class="btn-submit btn-cancel" onclick="resetForm()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+
+        <div id="msgSuccess" class="alert">✅ Saved Successfully! Image Compressed.</div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">📋 Live Catalog</div>
+        <div class="table-responsive">
+            <table id="catalogTable">
+                <thead>
+                    <tr>
+                        <th width="80">Img</th>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7FOAqhpJNVq7J6iYBcknOqWdedCIYQvQ",
+        authDomain: "kingstenderapp.firebaseapp.com",
+        projectId: "kingstenderapp",
+        storageBucket: "kingstenderapp.firebasestorage.app",
+        messagingSenderId: "264140729392",
+        appId: "1:264140729392:web:01064f3b288e653a99d1f5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 1. IMAGE HANDLING (AUTO COMPRESS TO BASE64)
+    // Ini rahasianya biar gambar pasti masuk database
+    function handleImageUpload() {
+        const file = document.getElementById('sImgInput').files[0];
+        const preview = document.getElementById('imgPreview');
+        const hiddenField = document.getElementById('sImgBase64');
+
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function (event) {
+            const img = new Image();
+            img.src = event.target.result;
+            
+            img.onload = function () {
+                // Buat Canvas buat ngecilin gambar
+                const canvas = document.createElement("canvas");
+                const MAX_WIDTH = 400; // Lebar maksimal 400px (cukup buat HP)
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Kompres jadi JPEG kualitas 60%
+                // Hasilnya cuma sekitar 50KB - 100KB (Aman buat Database)
+                const srcEncoded = canvas.toDataURL("image/jpeg", 0.6); 
+                
+                hiddenField.value = srcEncoded; // Simpan di hidden input
+                preview.src = srcEncoded;       // Tampilkan preview
+                preview.style.display = "block";
+            }
+        }
+    }
+
+    // 2. READ DATA
+    db.collection("products").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = ""; 
+
+        if(snapshot.empty){
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px;">No products yet.</td></tr>`;
+            return;
+        }
+
+        snapshot.forEach((doc) => {
+            const d = doc.data();
+            const id = doc.id; 
+            
+            // Tampilkan gambar dari database
+            const imgDisplay = d.imageUrl ? `<img src="${d.imageUrl}" class="thumb-small">` : `<div class="thumb-small" style="background:#eee; display:flex; align-items:center; justify-content:center;">No Img</div>`;
+
+            let badge = "badge-heavy";
+            if(d.category === "Light Snack") badge = "badge-snack";
+            if(d.category === "Beverage") badge = "badge-drink";
+            if(d.category === "Dessert") badge = "badge-sweet";
+
+            const row = `
+                <tr>
+                    <td>${imgDisplay}</td>
+                    <td><b>${d.items[0]}</b><br><small>${d.sellerName}</small></td>
+                    <td><span class="badge ${badge}">${d.category}</span></td>
+                    <td>Rp ${d.basePrice.toLocaleString()}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-mini btn-edit" onclick="editMode('${id}', '${d.sellerName}', '${d.contact}', '${d.items[0]}', '${d.category}', '${d.basePrice}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-mini btn-del" onclick="deleteProduct('${id}', '${d.items[0]}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    });
+
+    // 3. SAVE PRODUCT
+    function saveProduct() {
+        const id = document.getElementById('editId').value;
+        const name = document.getElementById('sName').value;
+        const contact = document.getElementById('sContact').value;
+        const item = document.getElementById('sItem').value;
+        const category = document.getElementById('sCategory').value;
+        const price = document.getElementById('sPrice').value;
+        const imgBase64 = document.getElementById('sImgBase64').value; // Ambil gambar yg udah dikompres
+
+        if (!name || !item || !price) return alert("Isi semua data!");
+        if (!imgBase64 && !id) return alert("Wajib upload foto!"); // Kalau edit boleh ga upload ulang
+
+        const btn = document.getElementById('btnPublish');
+        btn.innerHTML = 'Saving...';
+        btn.disabled = true;
+
+        const data = {
+            sellerName: name,
+            contact: contact,
+            items: [item],
+            category: category,
+            basePrice: parseInt(price),
+            timestamp: new Date()
+        };
+
+        // Kalau ada gambar baru, simpan. Kalau edit tapi ga upload baru, gambar lama tetap aman.
+        if(imgBase64) {
+            data.imageUrl = imgBase64;
+        }
+
+        if (id) {
+            db.collection("products").doc(id).set(data, { merge: true }).then(() => {
+                doneSaving();
+            }).catch(e => { alert("Error: " + e.message); btn.disabled = false; });
+        } else {
+            data.sellerId = "S-" + Date.now();
+            db.collection("products").add(data).then(() => {
+                doneSaving();
+            }).catch(e => { alert("Error: " + e.message); btn.disabled = false; });
+        }
+    }
+
+    function deleteProduct(id, name) {
+        if(confirm("Hapus " + name + "?")) {
+            db.collection("products").doc(id).delete();
+        }
+    }
+
+    function editMode(id, name, contact, item, category, price) {
+        document.getElementById('editId').value = id;
+        document.getElementById('sName').value = name;
+        document.getElementById('sContact').value = contact;
+        document.getElementById('sItem').value = item;
+        document.getElementById('sCategory').value = category;
+        document.getElementById('sPrice').value = price;
+        
+        document.getElementById('imgPreview').style.display = 'none';
+        document.getElementById('sImgBase64').value = ""; 
+
+        const btn = document.getElementById('btnPublish');
+        btn.innerHTML = 'Update Product';
+        btn.classList.add('btn-update');
+        document.getElementById('btnCancel').style.display = 'block';
+        window.scrollTo(0,0);
+    }
+
+    function resetForm() {
+        document.getElementById('editId').value = "";
+        document.getElementById('sItem').value = "";
+        document.getElementById('sPrice').value = "";
+        document.getElementById('sImgBase64').value = "";
+        document.getElementById('sImgInput').value = "";
+        document.getElementById('imgPreview').style.display = 'none';
+        
+        const btn = document.getElementById('btnPublish');
+        btn.innerHTML = 'Add to Catalog';
+        btn.classList.remove('btn-update');
+        document.getElementById('btnCancel').style.display = 'none';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus-circle"></i> Add to Catalog';
+    }
+
+    function doneSaving() {
+        document.getElementById('msgSuccess').style.display = 'block';
+        setTimeout(() => document.getElementById('msgSuccess').style.display = 'none', 3000);
+        resetForm();
+    }
+</script>
+</body>
+</html>

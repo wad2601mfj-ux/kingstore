@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>King's Tender - Smart Intent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --primary: #4361ee; --secondary: #f72585; --bg: #b4ccf1; --text: #1e293b; --card: #ffffff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: var(--bg); color: var(--text); height: 100vh; width: 100vw; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header { flex-shrink: 0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 50; }
+        .brand { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        .btn-icon { position: relative; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+        .btn-icon:hover { opacity: 0.8; transform: scale(1.1); }
+        .cart-badge { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid #1e3a8a; }
+
+        .layout { flex: 1; display: flex; width: 100%; max-width: 1400px; margin: 0 auto; gap: 15px; padding: 15px; overflow: hidden; }
+        .panel { background: var(--card); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); height: 100%; }
+        .panel-left { flex: 1; }
+        .panel-right { flex: 1.3; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .panel-head { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: white; }
+        
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
+        .bot { align-self: flex-start; background: #f1f5f9; color: #333; border: 1px solid #eee; }
+        .user { align-self: flex-end; background: var(--primary); color: white; }
+
+        .input-area { padding: 15px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
+        .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .chip { padding: 6px 12px; background: #eff6ff; color: var(--primary); border: 1px solid #dbeafe; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; font-weight: 500; }
+        .chip:hover { background: var(--primary); color: white; }
+
+        .row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .inp-grp { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; padding: 0 12px; flex: 1; }
+        .inp-grp input { border: none; background: transparent; padding: 12px 5px; width: 100%; outline: none; font-size: 0.9rem; }
+        .btn-send { width: 45px; border-radius: 10px; background: var(--primary); color: white; border: none; cursor: pointer; font-size: 1.2rem; }
+
+        .feed { flex: 1; padding: 15px; overflow-y: auto; padding-bottom: 80px; }
+        .card { background: white; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden; animation: slideIn 0.3s ease; border: 1px solid #f1f5f9; transition: 0.3s; }
+        
+        .card-img { width: 100%; height: 400px; background: #eee; position: relative; overflow: hidden; }
+        .food-pic { width: 100%; height: 100%; object-fit: cover; }
+        .seller-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: #333; }
+        .cat-badge { position: absolute; top: 8px; right: 8px; background: var(--secondary); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; z-index: 5; }
+
+        .card-body { padding: 15px; }
+        .food-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .price-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
+        .final-price { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+        .ai-note { font-size: 0.7rem; color: #10b981; font-weight: 600; background: #dcfce7; padding: 2px 6px; border-radius: 4px; }
+
+        .card-actions { display: flex; gap: 10px; align-items: center; }
+        .qty-input { width: 60px; padding: 10px; border: 2px solid #e2e8f0; border-radius: 10px; text-align: center; font-weight: bold; font-size: 1rem; }
+        .qty-input:focus { border-color: var(--primary); outline: none; }
+
+        .btn-cart-add { flex: 1; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-cart-add:hover { background: #334155; }
+        .btn-cart-add:active { transform: scale(0.98); }
+
+        /* CART MODAL */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .cart-modal { background: white; width: 90%; max-width: 450px; max-height: 85vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; animation: slideUp 0.3s ease; }
+        .cart-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+        .cart-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .cart-footer { padding: 20px; border-top: 1px solid #eee; background: white; }
+        
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
+        .cart-item-info div:first-child { font-weight: 600; color: #333; }
+        .cart-item-info div:last-child { font-size: 0.8rem; color: #64748b; }
+        .cart-item-price { font-weight: 700; color: var(--primary); margin-right: 10px; }
+        .btn-remove { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 1rem; }
+
+        .btn-checkout { width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; }
+        .btn-checkout:hover { background: #059669; }
+
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+
+        .mobile-nav { display: none; }
+        @media(max-width: 768px) {
+            .layout { padding: 0; gap: 0; }
+            .panel { border-radius: 0; border: none; }
+            .panel-right { display: none; }
+            body.tab-auc .panel-left { display: none; }
+            body.tab-auc .panel-right { display: flex; }
+            .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #eee; z-index: 90; padding-bottom: env(safe-area-inset-bottom); }
+            .nav-item { flex: 1; padding: 12px; text-align: center; color: #94a3b8; cursor: pointer; font-size: 0.9rem; }
+            .nav-item.active { color: var(--primary); font-weight: bold; }
+            .input-area { padding-bottom: 70px; }
+            .feed { padding-bottom: 70px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="brand"><i class="fas fa-smile"></i> Nyam.AI</div>
+    <div class="header-actions">
+        <div class="btn-icon" onclick="openCart()">
+            <i class="fas fa-shopping-cart"></i>
+            <div class="cart-badge" id="cartCount">0</div>
+        </div>
+        <div class="btn-icon" onclick="showHistory()">
+            <i class="fas fa-history"></i>
+        </div>
+    </div>
+</header>
+
+<div class="layout">
+    <div class="panel panel-left">
+        <div class="panel-head">Smart Request Assistant</div>
+        <div class="chat-box" id="chat">
+            <div class="msg bot">
+                System Online.<br>
+                <b>Try saying:</b><br>
+                - <i>"I'm thirsty"</i> or <i>"Haus"</i><br>
+                - <i>"Something sweet"</i> or <i>"Manis"</i><br>
+                - <i>"Spicy food"</i> or <i>"Pedas"</i>
+            </div>
+        </div>
+        <div class="input-area">
+            <div class="chips">
+                <div class="chip" onclick="setInput('I\'m thirsty')">🥤 Thirsty</div>
+                <div class="chip" onclick="setInput('Something sweet')">🍰 Sweet</div>
+                <div class="chip" onclick="setInput('Something spicy')">🌶️ Spicy</div>
+                <div class="chip" onclick="setInput('I\'m hungry')">🍛 Hungry</div>
+            </div>
+            
+            <div class="row">
+                <div class="inp-grp" style="width: 100%;">
+                    <input type="text" id="addr" placeholder="Delivery Address (Required)">
+                </div>
+            </div>
+            <div class="row">
+                <div class="inp-grp">
+                    <input type="text" id="item" placeholder="Type your wish..." onkeypress="if(event.key==='Enter') startProcessing()">
+                </div>
+                <button class="btn-send" onclick="startProcessing()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-right">
+        <div class="panel-head">
+            <span>Live Offers</span>
+            <span style="font-size:0.75rem; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px;">Smart Match</span>
+        </div>
+        <div class="feed" id="feed">
+            <div style="text-align:center; margin-top:50px; color:#aaa;">
+                <i class="fas fa-search fa-3x" style="margin-bottom:10px; opacity:0.3;"></i>
+                <p>Waiting for request...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mobile-nav">
+    <div class="nav-item active" onclick="tab('req', this)"><i class="fas fa-comment-alt"></i> Request</div>
+    <div class="nav-item" onclick="tab('auc', this)"><i class="fas fa-store"></i> Offers</div>
+</div>
+
+<div class="overlay" id="cartModal">
+    <div class="cart-modal">
+        <div class="cart-header">
+            <h3><i class="fas fa-shopping-bag"></i> Your Cart</h3>
+            <i class="fas fa-times" style="cursor:pointer; font-size:1.2rem;" onclick="closeCart()"></i>
+        </div>
+        <div class="cart-body" id="cartList">
+            <p style="text-align:center; color:#999; margin-top:20px;">Cart is empty.</p>
+        </div>
+        <div class="cart-footer">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:bold; font-size:1.1rem;">
+                <span>Total</span>
+                <span id="cartTotal">Rp 0</span>
+            </div>
+            <button class="btn-checkout" onclick="checkout()">
+                CHECKOUT NOW <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="histModal">
+    <div class="cart-modal">
+        <div class="cart-header">
+            <h3>Order History</h3>
+            <i class="fas fa-times" style="cursor:pointer;" onclick="closeHistModal()"></i>
+        </div>
+        <div class="cart-body" id="histList">Loading...</div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7FOAqhpJNVq7J6iYBcknOqWdedCIYQvQ",
+        authDomain: "kingstenderapp.firebaseapp.com",
+        projectId: "kingstenderapp",
+        storageBucket: "kingstenderapp.firebasestorage.app",
+        messagingSenderId: "264140729392",
+        appId: "1:264140729392:web:01064f3b288e653a99d1f5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 1. DATA HARDCODED
+    let hardcodedSellers = [
+    ];
+
+    let allSellers = [...hardcodedSellers];
+
+    db.collection("products").onSnapshot((snapshot) => {
+        let dbSellers = [];
+        snapshot.forEach((doc) => {
+            dbSellers.push(doc.data());
+        });
+        allSellers = [...hardcodedSellers, ...dbSellers];
+        console.log("DB Loaded:", allSellers.length);
+    });
+
+    // 2. SHOPPING CART + ADDRESS LOGIC
+    let cart = [];
+
+    function addToCart(seller, item, basePrice, id, addr) {
+        const qtyInput = document.getElementById('qty-' + id);
+        const qty = parseInt(qtyInput.value) || 1;
+        const totalPrice = (basePrice * qty) + 3000;
+
+        cart.push({ seller, item, price: totalPrice, qty, id, address: addr });
+        updateCartBadge();
+        
+        const btn = document.querySelector(`#${id} .btn-cart-add`);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<i class="fas fa-check"></i> Added!`;
+        btn.style.background = "#10b981";
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = "#0f172a";
+        }, 1000);
+    }
+
+    function updateCartBadge() {
+        document.getElementById('cartCount').innerText = cart.length;
+        document.querySelector('.cart-badge').style.display = cart.length > 0 ? 'flex' : 'none';
+    }
+
+    function openCart() {
+        document.getElementById('cartModal').style.display = 'flex';
+        renderCartItems();
+    }
+
+    function closeCart() { document.getElementById('cartModal').style.display = 'none'; }
+
+    function renderCartItems() {
+        const list = document.getElementById('cartList');
+        const totalEl = document.getElementById('cartTotal');
+        
+        if(cart.length === 0) {
+            list.innerHTML = `<div style="text-align:center; padding:30px; color:#aaa;">Cart is empty.</div>`;
+            totalEl.innerText = "Rp 0";
+            return;
+        }
+
+        let html = '';
+        let total = 0;
+
+        cart.forEach((c, index) => {
+            total += c.price;
+            html += `
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div>${c.item} (x${c.qty})</div>
+                    <div><small>${c.seller}</small></div>
+                    <div style="font-size:0.75rem; color:#1e3a8a;">📍 To: ${c.address}</div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <div class="cart-item-price">Rp ${c.price.toLocaleString()}</div>
+                    <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>`;
+        });
+
+        list.innerHTML = html;
+        totalEl.innerText = "Rp " + total.toLocaleString();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCartItems();
+        updateCartBadge();
+    }
+
+    function checkout() {
+        if(cart.length === 0) return alert("Cart is empty!");
+        if(!confirm(`Pay Rp ${document.getElementById('cartTotal').innerText.replace('Rp ','')}?`)) return;
+
+        cart.forEach(c => {
+            db.collection("orders").add({
+                item: c.item + ` (x${c.qty})`, 
+                seller: c.seller,
+                total: c.price,
+                address: c.address,
+                status: "Paid",
+                time: new Date()
+            });
+        });
+
+        cart = [];
+        updateCartBadge();
+        closeCart();
+        addChat('bot', `🎉 Order Placed! Check history.`);
+    }
+
+    // 3. AI & SEARCH LOGIC
+    async function askOllama(promptText) {
+        try {
+            const response = await fetch("http://localhost:11434/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "llama3.1:8b",
+                    prompt: `Extract KEYWORD and BUDGET from: "${promptText}". Return JSON: {"keyword": "string", "budget": number}.`,
+                    stream: false,
+                    format: "json"
+                })
+            });
+            const data = await response.json();
+            return JSON.parse(data.response);
+        } catch (e) { return null; }
+    }
+
+    async function startProcessing() {
+        const rawText = document.getElementById('item').value.trim();
+        const addr = document.getElementById('addr').value.trim();
+
+        if(!rawText || !addr) return alert("Please fill request & address!");
+
+        addChat('user', `<b>"${rawText}"</b><br><small>To: ${addr}</small>`);
+        document.getElementById('item').value = '';
+
+        const loadingId = "load-" + Date.now();
+        addChat('bot', `<span id="${loadingId}"><i class="fas fa-spinner fa-spin"></i> Understanding Intent...</span>`);
+
+        let keyword = rawText;
+        let budget = Infinity;
+
+        const aiData = await askOllama(rawText);
+        
+        const regexBudget = /(?:under|bawah|<|cheap)\s*(\d+)(k|rb|000)?/i;
+        const match = rawText.match(regexBudget);
+        
+        if (match) {
+            let num = parseInt(match[1]);
+            if(match[2] === 'k' || match[2] === 'rb') num *= 1000;
+            else if(num < 1000) num *= 1000; 
+            budget = num;
+            keyword = keyword.replace(match[0], "").trim();
+        } else if (aiData && aiData.budget > 0) {
+            budget = aiData.budget;
+            if(aiData.keyword) keyword = aiData.keyword;
+        }
+
+        document.getElementById(loadingId).innerHTML = `Intent Detected: <b>${keyword}</b>`;
+        
+        runSmartRankedSearch(keyword, budget, addr);
+    }
+
+    // --- 4. LOGIC PENCARIAN & INTENT RECOGNITION (UPDATED) ---
+    function runSmartRankedSearch(keyword, budget, addr) {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = ''; 
+
+        // 1. INTENT MAPPING (PENGENALAN MAKSUD)
+        let cleanKey = keyword.toLowerCase().replace(/i want|saya mau|buy|cari|would like|to have|something|im|i am/g, "").trim();
+        
+        let targetCat = "";
+        let bonusKeywords = [];
+
+        // Logic "I'm Thirsty"
+        if(cleanKey.includes("thirsty") || cleanKey.includes("haus") || cleanKey.includes("minum")) {
+            targetCat = "Beverage";
+            bonusKeywords = ["es", "ice", "teh", "kopi", "water"];
+        }
+        // Logic "Something Sweet"
+        else if(cleanKey.includes("sweet") || cleanKey.includes("manis")) {
+            targetCat = "Dessert"; // Utama ke dessert
+            bonusKeywords = ["susu", "kopi susu", "chocolate", "cokelat", "manis", "sugar", "cake", "martabak"];
+        }
+        // Logic "Spicy"
+        else if(cleanKey.includes("spicy") || cleanKey.includes("pedas") || cleanKey.includes("hot")) {
+            targetCat = "Heavy Meal"; 
+            bonusKeywords = ["rendang", "balado", "pedas", "sambal", "cabai", "mercon", "geprek"];
+        }
+        // Logic "Hungry"
+        else if(cleanKey.includes("hungry") || cleanKey.includes("lapar") || cleanKey.includes("makan")) {
+            targetCat = "Heavy Meal";
+            bonusKeywords = ["nasi", "ayam", "bebek", "soto", "mie"];
+        }
+        // Default mappings
+        else if(cleanKey.includes("coffee") || cleanKey.includes("kopi")) targetCat = "Beverage";
+        else if(cleanKey.includes("snack") || cleanKey.includes("cemilan")) targetCat = "Light Snack";
+        else if(cleanKey.includes("dessert")) targetCat = "Dessert";
+        else if(cleanKey.includes("heavy") || cleanKey.includes("berat")) targetCat = "Heavy Meal";
+
+        // Gabungin cleanKey biasa sama bonusKeywords
+        const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 2);
+
+        let results = allSellers.map(s => {
+            let score = 0;
+            let matchItem = s.items[0];
+
+            // 1. Exact/Partial Item Match (Highest Priority)
+            let bestItem = s.items.find(i => {
+                const iLow = i.toLowerCase();
+                return searchTerms.some(term => iLow.includes(term));
+            });
+
+            if(bestItem) { score += 100; matchItem = bestItem; }
+
+            // 2. Category Match
+            if(targetCat && s.category === targetCat) score += 50;
+            
+            // 3. Special Case: Sweet Beverage (Kopi Susu)
+            if(cleanKey.includes("sweet") && s.category === "Beverage" && matchItem.toLowerCase().includes("susu")) {
+                score += 70; // Boost
+            }
+
+            // Budget
+            const total = (s.basePrice * 1) + 3000;
+            if(budget !== Infinity && total > budget) score = -1; 
+
+            return { ...s, score, matchItem, total };
+        });
+
+        results = results.filter(r => r.score > 0);
+        results.sort((a, b) => b.score - a.score); 
+
+        if(results.length === 0) {
+            feed.innerHTML = `<div style="text-align:center; margin-top:50px; color:#aaa;">No items found.</div>`;
+            return;
+        }
+
+        results.forEach((s, i) => {
+            setTimeout(() => {
+                const cardId = "card-" + Math.random().toString(36).substr(2, 9);
+                let badgeInfo = "";
+                if(s.score >= 100) badgeInfo = `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>`;
+
+                // LOGIC GAMBAR (UPLOAD OR POLLINATIONS)
+                let imgSrc;
+                if (s.imageUrl) {
+                    imgSrc = s.imageUrl;
+                } else {
+                    let searchTerm = s.category;
+                    const lowerItem = s.matchItem.toLowerCase();
+                    if (lowerItem.includes('nasi')) searchTerm = 'fried rice meal';
+                    else if (lowerItem.includes('martabak')) searchTerm = 'martabak sweet pancake';
+                    else if (lowerItem.includes('kopi')) searchTerm = 'coffee cup';
+                    else if (lowerItem.includes('teh')) searchTerm = 'iced tea';
+                    else if (lowerItem.includes('pedas') || lowerItem.includes('spicy')) searchTerm = 'spicy chili food';
+                    
+                    const seed = Math.floor(Math.random() * 1000);
+                    imgSrc = `https://image.pollinations.ai/prompt/${encodeURIComponent(searchTerm)}?width=400&height=200&nologo=true&seed=${seed}`;
+                }
+
+                const card = `
+                <div class="card" id="${cardId}">
+                    <div class="card-img">
+                        <img src="${imgSrc}" class="food-pic" style="background:#eee;" onerror="this.src='https://via.placeholder.com/400x200?text=Food'">
+                        <div class="cat-badge">${s.category}</div>
+                        <div class="seller-tag">${s.sellerName}</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="food-title">${s.matchItem} ${badgeInfo}</div>
+                        <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
+                        <div class="price-row">
+                            <div class="detail">Rp ${s.basePrice.toLocaleString()} / item</div>
+                            <div class="final-price" style="font-size:1rem;">+ Ongkir</div>
+                        </div>
+                        <div class="card-actions">
+                            <input type="number" id="qty-${cardId}" class="qty-input" value="1" min="1">
+                            <button class="btn-cart-add" onclick="addToCart('${s.sellerName}', '${s.matchItem}', ${s.basePrice}, '${cardId}', '${addr}')">
+                                <i class="fas fa-cart-plus"></i> ADD
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+                feed.insertAdjacentHTML('beforeend', card);
+            }, i * 200);
+        });
+    }
+
+    function showHistory() {
+        const list = document.getElementById('histList');
+        document.getElementById('histModal').style.display = 'flex';
+        list.innerHTML = 'Fetching...';
+
+        db.collection("orders").orderBy("time", "desc").limit(10).get().then(snap => {
+            if(snap.empty) { list.innerHTML = '<div style="padding:20px; text-align:center;">No history.</div>'; return; }
+            let h = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const time = d.time ? d.time.toDate().toLocaleTimeString() : '-';
+                const addrDisplay = d.address ? `<br><small style="color:#666;">📍 ${d.address}</small>` : '';
+                h += `<div class="cart-item">
+                        <div><b>${d.item}</b><br><small>${d.seller}</small>${addrDisplay}</div>
+                        <div style="text-align:right"><b>Rp ${d.total.toLocaleString()}</b><br><small>${time}</small></div>
+                      </div>`;
+            });
+            list.innerHTML = h;
+        });
+    }
+
+    function closeHistModal() { document.getElementById('histModal').style.display = 'none'; }
+    function setInput(val) { document.getElementById('item').value = val; }
+    function addChat(sender, html) {
+        const c = document.getElementById('chat');
+        c.innerHTML += `<div class="msg ${sender}">${html}</div>`;
+        c.scrollTop = c.scrollHeight;
+    }
+    function tab(mode, el) {
+        document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        if(mode === 'req') document.body.classList.remove('tab-auc');
+        else document.body.classList.add('tab-auc');
+    }
+</script>
+</body>
+</html>
