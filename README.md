@@ -8,7 +8,7 @@ KingStore is a modern food delivery web application with a sweet and user-friend
 
 - Live Auction System: Multiple sellers compete to offer you the best prices for your desired food
 
-- Quick Search: Instant food recommendations using filter chips (Nasi Padang, Pizza, Desserts, etc.)
+- Quick Search: Instant food recommendations using filter chips (Nasi Goreng, French Fries, Desserts, etc.)
 
 - Real-time Offers: Watch as sellers bid in real-time for your business
 
