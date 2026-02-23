@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>King's Tender - Smart Intent</title>
+    <title>Nyam.AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -53,9 +53,10 @@
         .cat-badge { position: absolute; top: 8px; right: 8px; background: var(--secondary); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; z-index: 5; }
 
         .card-body { padding: 15px; }
-        .food-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .food-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .price-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
         .final-price { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+        .original-price { font-size: 0.9rem; color: #94a3b8; text-decoration: line-through; margin-right: 8px; }
         .ai-note { font-size: 0.7rem; color: #10b981; font-weight: 600; background: #dcfce7; padding: 2px 6px; border-radius: 4px; }
 
         .card-actions { display: flex; gap: 10px; align-items: center; }
@@ -65,6 +66,9 @@
         .btn-cart-add { flex: 1; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn-cart-add:hover { background: #334155; }
         .btn-cart-add:active { transform: scale(0.98); }
+
+        /* Special offer badge */
+        .offer-badge { background: #f97316; color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; margin-left: 5px; }
 
         /* CART MODAL */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -211,28 +215,28 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 1. DATA HARDCODED
-    let hardcodedSellers = [
-    ];
+    // HARDCODED SELLERS (if any)
+    let hardcodedSellers = [];
 
     let allSellers = [...hardcodedSellers];
 
     db.collection("products").onSnapshot((snapshot) => {
         let dbSellers = [];
         snapshot.forEach((doc) => {
-            dbSellers.push(doc.data());
+            dbSellers.push({ id: doc.id, ...doc.data() });
         });
         allSellers = [...hardcodedSellers, ...dbSellers];
         console.log("DB Loaded:", allSellers.length);
     });
 
-    // 2. SHOPPING CART + ADDRESS LOGIC
+    // SHOPPING CART
     let cart = [];
 
-    function addToCart(seller, item, basePrice, id, addr) {
+    // Updated addToCart to accept discounted price
+    function addToCart(seller, item, price, id, addr) {
         const qtyInput = document.getElementById('qty-' + id);
         const qty = parseInt(qtyInput.value) || 1;
-        const totalPrice = (basePrice * qty) + 3000;
+        const totalPrice = (price * qty) + 3000;
 
         cart.push({ seller, item, price: totalPrice, qty, id, address: addr });
         updateCartBadge();
@@ -320,7 +324,7 @@
         addChat('bot', `🎉 Order Placed! Check history.`);
     }
 
-    // 3. AI & SEARCH LOGIC
+    // AI & SEARCH LOGIC
     async function askOllama(promptText) {
         try {
             const response = await fetch("http://localhost:11434/api/generate", {
@@ -374,51 +378,44 @@
         runSmartRankedSearch(keyword, budget, addr);
     }
 
-    // --- 4. LOGIC PENCARIAN & INTENT RECOGNITION (UPDATED) ---
+    // UPDATED search with discount and offer sorting (budget compares item price only)
     function runSmartRankedSearch(keyword, budget, addr) {
         const feed = document.getElementById('feed');
         feed.innerHTML = ''; 
 
-        // 1. INTENT MAPPING (PENGENALAN MAKSUD)
+        // Intent mapping (unchanged)
         let cleanKey = keyword.toLowerCase().replace(/i want|saya mau|buy|cari|would like|to have|something|im|i am/g, "").trim();
         
         let targetCat = "";
         let bonusKeywords = [];
 
-        // Logic "I'm Thirsty"
         if(cleanKey.includes("thirsty") || cleanKey.includes("haus") || cleanKey.includes("minum")) {
             targetCat = "Beverage";
             bonusKeywords = ["es", "ice", "teh", "kopi", "water"];
         }
-        // Logic "Something Sweet"
         else if(cleanKey.includes("sweet") || cleanKey.includes("manis")) {
-            targetCat = "Dessert"; // Utama ke dessert
+            targetCat = "Dessert";
             bonusKeywords = ["susu", "kopi susu", "chocolate", "cokelat", "manis", "sugar", "cake", "martabak"];
         }
-        // Logic "Spicy"
         else if(cleanKey.includes("spicy") || cleanKey.includes("pedas") || cleanKey.includes("hot")) {
             targetCat = "Heavy Meal"; 
             bonusKeywords = ["rendang", "balado", "pedas", "sambal", "cabai", "mercon", "geprek"];
         }
-        // Logic "Hungry"
         else if(cleanKey.includes("hungry") || cleanKey.includes("lapar") || cleanKey.includes("makan")) {
             targetCat = "Heavy Meal";
             bonusKeywords = ["nasi", "ayam", "bebek", "soto", "mie"];
         }
-        // Default mappings
         else if(cleanKey.includes("coffee") || cleanKey.includes("kopi")) targetCat = "Beverage";
         else if(cleanKey.includes("snack") || cleanKey.includes("cemilan")) targetCat = "Light Snack";
         else if(cleanKey.includes("dessert")) targetCat = "Dessert";
         else if(cleanKey.includes("heavy") || cleanKey.includes("berat")) targetCat = "Heavy Meal";
 
-        // Gabungin cleanKey biasa sama bonusKeywords
         const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 2);
 
         let results = allSellers.map(s => {
             let score = 0;
             let matchItem = s.items[0];
 
-            // 1. Exact/Partial Item Match (Highest Priority)
             let bestItem = s.items.find(i => {
                 const iLow = i.toLowerCase();
                 return searchTerms.some(term => iLow.includes(term));
@@ -426,23 +423,31 @@
 
             if(bestItem) { score += 100; matchItem = bestItem; }
 
-            // 2. Category Match
             if(targetCat && s.category === targetCat) score += 50;
             
-            // 3. Special Case: Sweet Beverage (Kopi Susu)
             if(cleanKey.includes("sweet") && s.category === "Beverage" && matchItem.toLowerCase().includes("susu")) {
-                score += 70; // Boost
+                score += 70;
             }
 
-            // Budget
-            const total = (s.basePrice * 1) + 3000;
-            if(budget !== Infinity && total > budget) score = -1; 
+            // Calculate discounted price if discount exists
+            const discountedPrice = s.discount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
+            // BUDGET CHECK: compare only item price (discountedPrice) with budget
+            if(budget !== Infinity && discountedPrice > budget) score = -1; 
 
-            return { ...s, score, matchItem, total };
+            return { ...s, score, matchItem, discountedPrice };
         });
 
         results = results.filter(r => r.score > 0);
-        results.sort((a, b) => b.score - a.score); 
+
+        // Sort by offer (desc) then by score
+        results.sort((a, b) => {
+            if (a.offer && !b.offer) return -1;
+            if (!a.offer && b.offer) return 1;
+            if (a.offer && b.offer) {
+                return b.offer.seconds - a.offer.seconds || b.offer.nanoseconds - a.offer.nanoseconds;
+            }
+            return b.score - a.score;
+        });
 
         if(results.length === 0) {
             feed.innerHTML = `<div style="text-align:center; margin-top:50px; color:#aaa;">No items found.</div>`;
@@ -454,8 +459,8 @@
                 const cardId = "card-" + Math.random().toString(36).substr(2, 9);
                 let badgeInfo = "";
                 if(s.score >= 100) badgeInfo = `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>`;
+                let offerBadge = s.offer ? `<span class="offer-badge"><i class="fas fa-bolt"></i> Instant Offer</span>` : '';
 
-                // LOGIC GAMBAR (UPLOAD OR POLLINATIONS)
                 let imgSrc;
                 if (s.imageUrl) {
                     imgSrc = s.imageUrl;
@@ -472,6 +477,11 @@
                     imgSrc = `https://image.pollinations.ai/prompt/${encodeURIComponent(searchTerm)}?width=400&height=200&nologo=true&seed=${seed}`;
                 }
 
+                // Prepare price display
+                const hasDiscount = s.discount && s.discount > 0;
+                const displayPrice = s.discountedPrice;
+                const originalPriceHtml = hasDiscount ? `<span class="original-price">Rp ${s.basePrice.toLocaleString()}</span>` : '';
+
                 const card = `
                 <div class="card" id="${cardId}">
                     <div class="card-img">
@@ -480,15 +490,20 @@
                         <div class="seller-tag">${s.sellerName}</div>
                     </div>
                     <div class="card-body">
-                        <div class="food-title">${s.matchItem} ${badgeInfo}</div>
+                        <div class="food-title">
+                            ${s.matchItem} ${badgeInfo} ${offerBadge}
+                        </div>
                         <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
                         <div class="price-row">
-                            <div class="detail">Rp ${s.basePrice.toLocaleString()} / item</div>
-                            <div class="final-price" style="font-size:1rem;">+ Ongkir</div>
+                            <div class="detail">
+                                ${originalPriceHtml}
+                                <span class="final-price">Rp ${displayPrice.toLocaleString()}</span>
+                            </div>
+                            <div style="font-size:0.9rem;">+ Ongkir</div>
                         </div>
                         <div class="card-actions">
                             <input type="number" id="qty-${cardId}" class="qty-input" value="1" min="1">
-                            <button class="btn-cart-add" onclick="addToCart('${s.sellerName}', '${s.matchItem}', ${s.basePrice}, '${cardId}', '${addr}')">
+                            <button class="btn-cart-add" onclick="addToCart('${s.sellerName}', '${s.matchItem}', ${displayPrice}, '${cardId}', '${addr}')">
                                 <i class="fas fa-cart-plus"></i> ADD
                             </button>
                         </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seller Admin - Auto Compress</title>
+    <title>Seller Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -46,10 +46,12 @@
         .badge-drink { background: #dcfce7; color: #166534; }
         .badge-sweet { background: #ffedd5; color: #9a3412; }
 
-        .action-btns { display: flex; gap: 8px; }
+        .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-mini { padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: white; }
         .btn-edit { background: #f59e0b; }
         .btn-del { background: #ef4444; }
+        .btn-offer { background: #10b981; }
+        .btn-cancel-offer { background: #6b7280; }
         
         .alert { padding: 15px; border-radius: 10px; margin-top: 20px; display: none; text-align: center; font-weight: 600; background: #dcfce7; color: #166534; }
     </style>
@@ -89,7 +91,11 @@
                 <label>Base Price (IDR)</label>
                 <input type="number" id="sPrice" placeholder="Contoh: 15000">
             </div>
-            
+            <!-- Discount field -->
+            <div class="form-group">
+                <label>Discount (%)</label>
+                <input type="number" id="sDiscount" min="0" max="100" placeholder="0 = no discount">
+            </div>
             <div class="form-group">
                 <label>Product Photo</label>
                 <div class="file-upload" onclick="document.getElementById('sImgInput').click()">
@@ -145,8 +151,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 1. IMAGE HANDLING (AUTO COMPRESS TO BASE64)
-    // Ini rahasianya biar gambar pasti masuk database
+    // IMAGE HANDLING
     function handleImageUpload() {
         const file = document.getElementById('sImgInput').files[0];
         const preview = document.getElementById('imgPreview');
@@ -161,9 +166,8 @@
             img.src = event.target.result;
             
             img.onload = function () {
-                // Buat Canvas buat ngecilin gambar
                 const canvas = document.createElement("canvas");
-                const MAX_WIDTH = 400; // Lebar maksimal 400px (cukup buat HP)
+                const MAX_WIDTH = 400;
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
@@ -171,18 +175,16 @@
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Kompres jadi JPEG kualitas 60%
-                // Hasilnya cuma sekitar 50KB - 100KB (Aman buat Database)
                 const srcEncoded = canvas.toDataURL("image/jpeg", 0.6); 
                 
-                hiddenField.value = srcEncoded; // Simpan di hidden input
-                preview.src = srcEncoded;       // Tampilkan preview
+                hiddenField.value = srcEncoded;
+                preview.src = srcEncoded;
                 preview.style.display = "block";
             }
         }
     }
 
-    // 2. READ DATA
+    // READ DATA
     db.collection("products").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
         const tbody = document.getElementById("tableBody");
         tbody.innerHTML = ""; 
@@ -196,7 +198,6 @@
             const d = doc.data();
             const id = doc.id; 
             
-            // Tampilkan gambar dari database
             const imgDisplay = d.imageUrl ? `<img src="${d.imageUrl}" class="thumb-small">` : `<div class="thumb-small" style="background:#eee; display:flex; align-items:center; justify-content:center;">No Img</div>`;
 
             let badge = "badge-heavy";
@@ -204,17 +205,24 @@
             if(d.category === "Beverage") badge = "badge-drink";
             if(d.category === "Dessert") badge = "badge-sweet";
 
+            const hasOffer = d.offer ? true : false;
+            const cancelOfferButton = hasOffer ? `<button class="btn-mini btn-cancel-offer" onclick="cancelOffer('${id}')" title="Cancel instant offer"><i class="fas fa-ban"></i></button>` : '';
+
             const row = `
                 <tr>
                     <td>${imgDisplay}</td>
                     <td><b>${d.items[0]}</b><br><small>${d.sellerName}</small></td>
                     <td><span class="badge ${badge}">${d.category}</span></td>
-                    <td>Rp ${d.basePrice.toLocaleString()}</td>
+                    <td>Rp ${d.basePrice.toLocaleString()} ${d.discount ? `(-${d.discount}%)` : ''}</td>
                     <td>
                         <div class="action-btns">
-                            <button class="btn-mini btn-edit" onclick="editMode('${id}', '${d.sellerName}', '${d.contact}', '${d.items[0]}', '${d.category}', '${d.basePrice}')">
+                            <button class="btn-mini btn-edit" onclick="editMode('${id}', '${d.sellerName}', '${d.contact}', '${d.items[0]}', '${d.category}', '${d.basePrice}', '${d.discount || 0}')">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <button class="btn-mini btn-offer" onclick="makeOffer('${id}')" title="Push as instant offer">
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                            ${cancelOfferButton}
                             <button class="btn-mini btn-del" onclick="deleteProduct('${id}', '${d.items[0]}')">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -226,7 +234,27 @@
         });
     });
 
-    // 3. SAVE PRODUCT
+    // Cancel offer
+    function cancelOffer(id) {
+        if(confirm('Remove this product from instant offers?')) {
+            db.collection("products").doc(id).update({
+                offer: firebase.firestore.FieldValue.delete()
+            }).then(() => {
+                alert('Offer cancelled.');
+            }).catch(e => alert('Error: ' + e.message));
+        }
+    }
+
+    // Make offer
+    function makeOffer(id) {
+        db.collection("products").doc(id).update({
+            offer: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            alert('Product pushed as instant offer!');
+        }).catch(e => alert('Error: ' + e.message));
+    }
+
+    // SAVE PRODUCT (fixed discount logic)
     function saveProduct() {
         const id = document.getElementById('editId').value;
         const name = document.getElementById('sName').value;
@@ -234,12 +262,14 @@
         const item = document.getElementById('sItem').value;
         const category = document.getElementById('sCategory').value;
         const price = document.getElementById('sPrice').value;
-        const imgBase64 = document.getElementById('sImgBase64').value; // Ambil gambar yg udah dikompres
+        const discount = document.getElementById('sDiscount').value;
+        const imgBase64 = document.getElementById('sImgBase64').value;
 
         if (!name || !item || !price) return alert("Isi semua data!");
-        if (!imgBase64 && !id) return alert("Wajib upload foto!"); // Kalau edit boleh ga upload ulang
+        if (!imgBase64 && !id) return alert("Wajib upload foto!");
 
         const btn = document.getElementById('btnPublish');
+        const originalText = btn.innerHTML;   // store for later restore
         btn.innerHTML = 'Saving...';
         btn.disabled = true;
 
@@ -252,7 +282,22 @@
             timestamp: new Date()
         };
 
-        // Kalau ada gambar baru, simpan. Kalau edit tapi ga upload baru, gambar lama tetap aman.
+        // Handle discount correctly for new vs update
+        if (id) {
+            // Update mode: use delete if discount is 0 or empty
+            if (discount && parseInt(discount) > 0) {
+                data.discount = parseInt(discount);
+            } else {
+                data.discount = firebase.firestore.FieldValue.delete();
+            }
+        } else {
+            // New product: only add discount if >0
+            if (discount && parseInt(discount) > 0) {
+                data.discount = parseInt(discount);
+            }
+            // else omit discount field entirely
+        }
+
         if(imgBase64) {
             data.imageUrl = imgBase64;
         }
@@ -260,12 +305,20 @@
         if (id) {
             db.collection("products").doc(id).set(data, { merge: true }).then(() => {
                 doneSaving();
-            }).catch(e => { alert("Error: " + e.message); btn.disabled = false; });
+            }).catch(e => {
+                alert("Error: " + e.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
         } else {
             data.sellerId = "S-" + Date.now();
             db.collection("products").add(data).then(() => {
                 doneSaving();
-            }).catch(e => { alert("Error: " + e.message); btn.disabled = false; });
+            }).catch(e => {
+                alert("Error: " + e.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
         }
     }
 
@@ -275,13 +328,14 @@
         }
     }
 
-    function editMode(id, name, contact, item, category, price) {
+    function editMode(id, name, contact, item, category, price, discount) {
         document.getElementById('editId').value = id;
         document.getElementById('sName').value = name;
         document.getElementById('sContact').value = contact;
         document.getElementById('sItem').value = item;
         document.getElementById('sCategory').value = category;
         document.getElementById('sPrice').value = price;
+        document.getElementById('sDiscount').value = discount || 0;
         
         document.getElementById('imgPreview').style.display = 'none';
         document.getElementById('sImgBase64').value = ""; 
@@ -297,16 +351,16 @@
         document.getElementById('editId').value = "";
         document.getElementById('sItem').value = "";
         document.getElementById('sPrice').value = "";
+        document.getElementById('sDiscount').value = "";
         document.getElementById('sImgBase64').value = "";
         document.getElementById('sImgInput').value = "";
         document.getElementById('imgPreview').style.display = 'none';
         
         const btn = document.getElementById('btnPublish');
-        btn.innerHTML = 'Add to Catalog';
+        btn.innerHTML = '<i class="fas fa-plus-circle"></i> Add to Catalog';
         btn.classList.remove('btn-update');
         document.getElementById('btnCancel').style.display = 'none';
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-plus-circle"></i> Add to Catalog';
     }
 
     function doneSaving() {
